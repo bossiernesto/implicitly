@@ -29,4 +29,8 @@ describe 'checking types for Ruby classes' do
     @canvas.draw_circle(Point.new(24, 13), 34).should == 34
   end
 
+  it 'incorrect number of parameters' do
+    expect { @canvas.draw_circle(Point.new(12, 3)).should == 34 }.to raise_exception
+  end
+
 end

@@ -9,7 +9,7 @@ class Class
     #create a type checker and overwrite the original method with the new one
     type_checker = TypeChecker.new parameters, &block
     self.send :define_method, sym.to_sym do |*params|
-      type_checker.validate_types(*params)
+      type_checker.validate_types(*params, sym.to_sym)
       self.send old_method.to_sym, *params
     end
   end
@@ -35,10 +35,12 @@ class TypeChecker
     self.validators.push(TypeCheckerValidator.new(param_sym, type))
   end
 
-  def validate_types(*params)
+  def validate_types(*params, method_sym)
+    raise "Invalid number of parameters for method #{method_sym}" unless self.parameters.length == params.length
+
     zipped_params = self.parameters.zip(params)
     zipped_params.each do |param_name, param_value|
-      validator=self.validators.select {|validator| validator.param == param_name}[0]
+      validator=self.validators.select { |validator| validator.param == param_name }[0]
       validator.validate_value_type(param_value)
     end
   end
@@ -55,7 +57,51 @@ class TypeCheckerValidator
   end
 
   def validate_value_type(value)
-    raise "TypeError: #{value} is not type of #{self.type}" unless value.class ==  self.type
+    raise "TypeError: #{value} is not type of #{self.type}" unless value.class == self.type
   end
 
 end
+
+
+#Implicit feature
+class Implicit
+  attr_accessor @for_klass, @conversion, @condition
+
+  def for_class(klass)
+    self.for_klass=klass
+  end
+
+  def check_implicit(*params)
+    condition = self.condition.call *params
+    if condition
+      return self.convert_params(*params)
+    end
+    params
+  end
+
+  def convert_params(*params)
+    self.conversion.call *params
+  end
+
+end
+
+#This class is used for keeping a collection of implicits
+class Implicits
+  attr_accessor @implicits
+
+  def self.add(implicit)
+    self.implicits #this is called for lazy initialize the array at any time
+
+    self.implicits.push(implicit)
+  end
+
+  def self.implicits
+    @implicits || []
+  end
+
+  def get_implicits_by(klass)
+    self.implicits.select { |implicit| implicit.for_klass == klass }
+  end
+
+end
+
