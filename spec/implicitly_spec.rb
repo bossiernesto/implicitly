@@ -1,10 +1,11 @@
 require 'rspec'
 require_relative '../src/implicitly'
-require_relative 'fixture_classes'
+
 
 describe 'checking types for Ruby classes' do
 
   before(:each) do
+    require_relative 'fixture_classes'
     @canvas = Canvas.new
   end
 

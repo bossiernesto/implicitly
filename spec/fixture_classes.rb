@@ -26,7 +26,7 @@ class Canvas
 
   types_of :draw_circle do
     param :point, Point
-    param :radius, Numeric
+    param :radius, Fixnum
   end
 
 end
