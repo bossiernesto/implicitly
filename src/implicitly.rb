@@ -9,14 +9,23 @@ class Class
     #create a type checker and overwrite the original method with the new one
     type_checker = TypeChecker.new parameters, &block
     self.send :define_method, sym.to_sym do |*params|
-      type_checker.validate_types(*params, sym.to_sym)
-      self.send old_method.to_sym, *params
+      new_params = self.class.implicitly_transform *params
+      type_checker.validate_types(*new_params, sym.to_sym)
+      self.send old_method.to_sym, *new_params
     end
   end
 
   def get_parameters_from_method(sym)
     unbound_method = self.instance_method(sym.to_sym)
     unbound_method.parameters.map { |p| p[1] }
+  end
+
+  def implicitly_transform(*params)
+    implicits = Implicits.get_implicits_by self
+    implicits.each do |implicit|
+      params = implicit.check_implicit *params
+    end
+    params
   end
 
 end
@@ -65,7 +74,7 @@ end
 
 #Implicit feature
 class Implicit
-  attr_accessor @for_klass, @conversion, @condition
+  attr_accessor :for_klass, :conversion, :condition
 
   def for_class(klass)
     self.for_klass=klass
@@ -87,20 +96,22 @@ end
 
 #This class is used for keeping a collection of implicits
 class Implicits
-  attr_accessor @implicits
+  @@implicits = []
 
   def self.add(implicit)
-    self.implicits #this is called for lazy initialize the array at any time
-
-    self.implicits.push(implicit)
+    @@implicits.push(implicit)
   end
 
   def self.implicits
-    @implicits || []
+    @@implicits || []
   end
 
-  def get_implicits_by(klass)
+  def self.get_implicits_by(klass)
     self.implicits.select { |implicit| implicit.for_klass == klass }
+  end
+
+  def self.clean_implicits
+    @@implicits= []
   end
 
 end
